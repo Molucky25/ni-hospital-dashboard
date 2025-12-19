@@ -5,10 +5,16 @@ import re
 import json
 import csv
 import io
+import logging
+import traceback
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional, Tuple
 from bs4 import BeautifulSoup
 from collections import defaultdict
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
@@ -260,7 +266,9 @@ def index():
 @app.route('/api/wait-times')
 def get_wait_times():
     try:
+        logger.info("Fetching wait times from NI Direct...")
         rows, last_updated = fetch_ni_direct_rows()
+        logger.info(f"Successfully fetched {len(rows)} hospitals")
         
         for row in rows:
             row['severity'] = get_severity_level(row['wait_mins'])
@@ -282,9 +290,12 @@ def get_wait_times():
             'alerts': active_alerts
         })
     except Exception as e:
+        logger.error(f"Error in get_wait_times: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'traceback': traceback.format_exc()
         }), 500
 
 @app.route('/api/historical')
