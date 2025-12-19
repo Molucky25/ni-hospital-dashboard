@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" class="dark bg-slate-950 text-slate-100">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Still Waiting NI — Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              accent: {
+                400: '#22d3ee',
+                500: '#06b6d4',
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="min-h-screen font-inter antialiased">
+    <div class="max-w-6xl mx-auto px-5 lg:px-8 py-6 space-y-4">
+      <!-- Header -->
+      <header class="flex items-start justify-between">
+        <div class="flex flex-col">
+          <h1 class="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-accent-500 to-cyan-400">
+            Still Waiting NI
+          </h1>
+          <span class="text-xs text-slate-400 font-medium">A&E Wait Times</span>
+          <div class="flex items-center gap-1 text-[11px] text-slate-500">
+            <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/></svg>
+            Updated 2:19 PM
+          </div>
+        </div>
+        <div class="flex items-center gap-3 rounded-xl border border-slate-800/60 bg-slate-900/50 p-3">
+          <span class="text-sm text-slate-300">Regional avg</span>
+          <span class="text-lg font-semibold text-slate-100">187m</span>
+          <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold bg-emerald-500/15 text-emerald-400">↓ 8% vs last hr</span>
+          <svg class="h-8 w-28 text-accent-500" aria-hidden="true"></svg>
+        </div>
+      </header>
+
+      <!-- Main Grid -->
+      <main class="grid grid-cols-1 lg:grid-cols-[560px_1fr] gap-5 mb-4">
+        <!-- Table -->
+        <section class="rounded-xl border border-slate-800/60 bg-slate-900/60 p-3.5">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-2">Hospitals</h2>
+          <table class="w-full text-sm">
+            <thead class="sticky top-0 bg-slate-900/80 backdrop-blur">
+              <tr class="text-slate-400">
+                <th class="py-2 px-3 text-left">Status</th>
+                <th class="py-2 px-3 text-left">Current Wait</th>
+                <th class="py-2 px-3 text-left">Patients Waiting</th>
+                <th class="py-2 px-3 text-left">Last 24h</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="hover:bg-slate-800/40 transition-colors duration-100 ease-out">
+                <td class="py-1.5 px-3">Belfast</td>
+                <td class="py-1.5 px-3"><span class="inline-flex items-center rounded-sm bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900">187m</span></td>
+                <td class="py-1.5 px-3 text-emerald-400">12m</td>
+                <td class="py-1.5 px-3 text-slate-400"><svg class="h-4 w-16 text-accent-400"></svg></td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition-colors duration-100 ease-out">
+                <td class="py-1.5 px-3">Enniskillen</td>
+                <td class="py-1.5 px-3"><span class="inline-flex items-center rounded-sm bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900">121m</span></td>
+                <td class="py-1.5 px-3 text-rose-400">+2m</td>
+                <td class="py-1.5 px-3 text-rose-400">↑2m</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Stat Cards -->
+        <aside class="space-y-3">
+          <!-- Average Wait Card -->
+          <div class="rounded-xl border border-slate-800/60 bg-slate-900/60 p-4 shadow-sm hover:bg-slate-900/80 transition-colors duration-150 ease-out">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-2">
+                <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent-500/15 text-accent-400">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </span>
+                <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Average Wait</span>
+              </div>
+              <span class="text-xs rounded-md px-1.5 py-0.5 font-medium bg-slate-800 text-slate-300">24h window</span>
+            </div>
+            <div class="mt-2 flex items-end justify-between">
+              <div class="leading-none">
+                <span class="block text-2xl font-semibold text-slate-100">187m</span>
+                <span class="mt-1 inline-flex items-center text-xs font-medium text-emerald-400">↓ 8% hr</span>
+              </div>
+              <div class="relative h-2 w-28 rounded-full bg-slate-800">
+                <span class="absolute -top-1 h-4 w-1 rounded-full bg-accent-400 left-[68%]"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trend Direction Card -->
+          <div class="rounded-xl border border-slate-800/60 bg-slate-900/60 p-4 shadow-sm">
+            <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Trend Direction</span>
+            <div class="flex items-center justify-between mt-2">
+              <span class="text-lg font-semibold text-slate-100">20m</span>
+              <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold bg-emerald-500/15 text-emerald-400">Improving</span>
+            </div>
+          </div>
+
+          <!-- Fastest Improvement Card -->
+          <div class="rounded-xl border border-slate-800/60 bg-slate-900/60 p-4 shadow-sm">
+            <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Fastest Improvement</span>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-slate-100 font-semibold">Antrim</span>
+              <span class="text-emerald-400 text-sm font-medium">5m</span>
+            </div>
+          </div>
+
+          <!-- Regional Pressure Card -->
+          <div class="rounded-xl border border-slate-800/60 bg-slate-900/60 p-4 shadow-sm">
+            <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Regional Pressure</span>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-lg font-semibold text-amber-400">3.8</span>
+              <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold bg-amber-500/15 text-amber-400">High</span>
+            </div>
+          </div>
+
+          <!-- Compact Sparkline -->
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+            <div class="mb-1 flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">24h Trend</span>
+              <span class="text-xs font-medium text-slate-300">↓ 12m</span>
+            </div>
+            <div class="relative h-10">
+              <svg class="absolute inset-0 h-full w-full text-accent-400"></svg>
+            </div>
+            <div class="mt-2 h-px w-full bg-slate-800"></div>
+          </div>
+        </aside>
+      </main>
+
+      <!-- Footer -->
+      <footer class="border-t border-slate-800 pt-3 text-center text-xs text-slate-500">
+        © 2025 Still Waiting NI — Tailwind Dashboard Redesign
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Still Waiting NI - A&E Wait Times</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        accent: {
+                            400: '#22D3EE',
+                            500: '#06B6D4'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* AGGRESSIVE text size increases for maximum Telegram readability (25-35% larger) */
+        .text-xs {
+            font-size: 0.95rem !important;  /* was 0.75rem (12px → 15.2px) +27% */
+        }
+        .text-sm {
+            font-size: 1.1rem !important;   /* was 0.875rem (14px → 17.6px) +26% */
+        }
+        .text-base {
+            font-size: 1.25rem !important;  /* was 1rem (16px → 20px) +25% */
+        }
+        .text-lg {
+            font-size: 1.4rem !important;   /* was 1.125rem (18px → 22.4px) +24% */
+        }
+        .text-xl {
+            font-size: 1.6rem !important;   /* was 1.25rem (20px → 25.6px) +28% */
+        }
+        .text-2xl {
+            font-size: 2rem !important;     /* was 1.5rem (24px → 32px) +33% */
+        }
+        .text-3xl {
+            font-size: 2.5rem !important;   /* was 1.875rem (30px → 40px) +33% */
+        }
+        
+        /* Override specific inline font sizes used in the dashboard */
+        [style*="font-size: 13px"] {
+            font-size: 17px !important;     /* +31% */
+        }
+        [style*="font-size: 15px"] {
+            font-size: 19px !important;     /* +27% */
+        }
+        [style*="font-size: 17px"] {
+            font-size: 22px !important;     /* +29% */
+        }
+        
+        /* Override Tailwind arbitrary values text-[Xpx] used throughout dashboard */
+        .text-\[10px\] {
+            font-size: 13px !important;     /* 10px → 13px (+30%) */
+        }
+        .text-\[11px\] {
+            font-size: 14px !important;     /* 11px → 14px (+27%) */
+        }
+        .text-\[13px\] {
+            font-size: 17px !important;     /* 13px → 17px (+31%) */
+        }
+        .text-\[15px\] {
+            font-size: 19px !important;     /* 15px → 19px (+27%) */
+        }
+        .text-\[17px\] {
+            font-size: 22px !important;     /* 17px → 22px (+29%) */
+        }
+        
+        /* Override clamp() for main title - increase all values */
+        .text-\[clamp\(2rem\,5vw\,2\.5rem\)\] {
+            font-size: clamp(2.6rem, 6vw, 3.2rem) !important; /* +30% across all breakpoints */
+        }
+        
+        /* Tighter line-height to keep cards compact despite much larger text */
+        p, span, div {
+            line-height: 1.3; /* was 1.5 - tighter for larger text */
+        }
+        
+        /* Accessibility: Focus states for keyboard navigation */
+        *:focus-visible {
+            outline: 2px solid #22D3EE;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        
+        /* Accessibility: Ensure sufficient spacing in table rows */
+        tbody tr {
+            line-height: 1.5; /* was 1.6 - slightly tighter */
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
+            width: 95%;
+            height: 95%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: grayscale(0%) brightness(1.15) contrast(1.1);
+        }
+        .sparkline {
+            display: inline-block;
+            stroke-width: 2;
+            stroke-linecap: round;
+            fill: none;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 24px;
+            flex: 1;
+            overflow: visible;
+        }
+        .table-section {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .stats-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 0;
+            overflow: visible;
+        }
+        
+        /* ===== DARK THEME ===== */
+        [data-theme="dark"] {
+            /* Background with subtle radial gradient for depth */
+            background: radial-gradient(circle at 50% 20%, #1e293b, #0b0f14 70%);
+        }
+        
+        [data-theme="dark"] body {
+            background: radial-gradient(circle at 50% 20%, #1e293b, #0b0f14 70%);
+        }
+        
+        /* Main container background with gradient */
+        [data-theme="dark"] .max-w-6xl {
+            background: linear-gradient(180deg, #111827 0%, #0B0F14 100%);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Brand title - Cyan Accent */
+        [data-theme="dark"] h1 {
+            background: linear-gradient(to right, #06B6D4, #22D3EE);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+        
+        /* Subtitle and secondary text */
+        [data-theme="dark"] .text-gray-500 {
+            color: #94A3B8 !important;
+        }
+        
+        [data-theme="dark"] .text-gray-600 {
+            color: #64748B !important;
+        }
+        
+        [data-theme="dark"] .text-gray-700 {
+            color: #CBD5E1 !important;
+        }
+        
+        [data-theme="dark"] .text-gray-800 {
+            color: #F1F5F9 !important;
+        }
+        
+        /* Table - dark panels */
+        [data-theme="dark"] .bg-gradient-to-br.from-blue-50 {
+            background: #111827 !important;
+            border-color: #1E293B !important;
+        }
+        
+        [data-theme="dark"] thead {
+            background: linear-gradient(to right, #1E293B, #334155) !important;
+        }
+        
+        [data-theme="dark"] tbody {
+            background: #111827 !important;
+        }
+        
+        [data-theme="dark"] .divide-y > * {
+            border-color: #1E293B !important;
+        }
+        
+        [data-theme="dark"] .border-b-2 {
+            border-color: #1E293B !important;
+        }
+        
+        [data-theme="dark"] tr:hover {
+            background: #1E293B !important;
+        }
+        
+        /* Stat cards - slate-900 backgrounds */
+        [data-theme="dark"] .bg-gradient-to-br {
+            background: #111827 !important;
+        }
+        
+        /* Trend Direction card - blue border */
+        [data-theme="dark"] .from-blue-50.to-indigo-50 {
+            background: #111827 !important;
+            border-color: #3B82F6 !important;
+        }
+        
+        /* Average Wait card - amber border */
+        [data-theme="dark"] .from-yellow-50.to-orange-50 {
+            background: #111827 !important;
+            border-color: #F59E0B !important;
+        }
+        
+        [data-theme="dark"] #avg-wait .text-orange-500 {
+            color: #FCD34D !important;
+        }
+        
+        /* Fastest Improvement card - teal border */
+        [data-theme="dark"] .from-emerald-50.to-green-50 {
+            background: #111827 !important;
+            border-color: #14B8A6 !important;
+        }
+        
+        [data-theme="dark"] #fastest-improvement .text-green-600 {
+            color: #2DD4BF !important;
+        }
+        
+        /* Most Stable card - violet border */
+        [data-theme="dark"] .from-purple-50.to-pink-50 {
+            background: #111827 !important;
+            border-color: #A855F7 !important;
+        }
+        
+        [data-theme="dark"] #most-stable .text-purple-600 {
+            color: #A78BFA !important;
+        }
+        
+        /* Regional Pressure card - red border */
+        [data-theme="dark"] .from-amber-50.to-yellow-50 {
+            background: #111827 !important;
+            border-color: #F59E0B !important;
+        }
+        
+        [data-theme="dark"] #pressure-index .text-orange-600 {
+            color: #F87171 !important;
+        }
+        
+        /* 24-hour trend card */
+        [data-theme="dark"] .from-purple-50.to-pink-50.rounded-lg {
+            background: #111827 !important;
+            border-color: #A855F7 !important;
+        }
+        
+        /* Red/orange/yellow stat card borders */
+        [data-theme="dark"] .from-red-50.to-orange-50 {
+            background: #111827 !important;
+            border-color: #EF4444 !important;
+        }
+        
+        [data-theme="dark"] .from-green-50.to-emerald-50 {
+            background: #111827 !important;
+            border-color: #10B981 !important;
+        }
+        
+        [data-theme="dark"] .from-rose-50.to-red-50 {
+            background: #111827 !important;
+            border-color: #EF4444 !important;
+        }
+        
+        /* Trend summaries in top-right */
+        [data-theme="dark"] #hourly-trend .text-green-600 {
+            color: #22D3EE !important;
+        }
+        
+        [data-theme="dark"] #hourly-trend .text-red-600 {
+            color: #F43F5E !important;
+        }
+        
+        [data-theme="dark"] #regional-trend .text-red-500 {
+            color: #F43F5E !important;
+        }
+        
+        [data-theme="dark"] #trend-direction .text-green-600 {
+            color: #22D3EE !important;
+        }
+        
+        [data-theme="dark"] #trend-direction .text-red-600 {
+            color: #F43F5E !important;
+        }
+        
+        /* Severity colors in table */
+        [data-theme="dark"] .text-red-600,
+        [data-theme="dark"] .text-red-500 {
+            color: #EF4444 !important;
+        }
+        
+        [data-theme="dark"] .text-orange-500 {
+            color: #FB923C !important;
+        }
+        
+        [data-theme="dark"] .text-yellow-500 {
+            color: #FBBF24 !important;
+        }
+        
+        [data-theme="dark"] .text-green-600,
+        [data-theme="dark"] .text-green-500 {
+            color: #10B981 !important;
+        }
+        
+        /* Trend arrows */
+        [data-theme="dark"] .text-green-500 {
+            color: #22D3EE !important;
+        }
+        
+        [data-theme="dark"] .text-red-500 {
+            color: #F43F5E !important;
+        }
+        
+        /* Footer */
+        [data-theme="dark"] .from-gray-50.to-blue-50 {
+            background: linear-gradient(to right, #1E293B, #111827) !important;
+            border-color: #1E293B !important;
+        }
+        
+        [data-theme="dark"] .border-gray-300 {
+            border-color: #1E293B !important;
+        }
+        
+        /* Footer branding */
+        [data-theme="dark"] .text-center p {
+            color: #64748B !important;
+        }
+        
+        /* Inline severity key */
+        [data-theme="dark"] .text-gray-600,
+        [data-theme="dark"] .text-gray-700 {
+            color: #CBD5E1 !important;
+        }
+        
+        /* Average wait vertical spectrum bar */
+        [data-theme="dark"] #avg-wait-indicator {
+            background: #F1F5F9 !important;
+            box-shadow: 0 0 6px rgba(241, 245, 249, 0.8), 0 0 2px rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        [data-theme="dark"] .text-gray-400,
+        [data-theme="dark"] .text-gray-500 {
+            color: #94A3B8 !important;
+        }
+    </style>
+</head>
+<body class="bg-white p-8">
+    <!-- Container for 16:9 aspect ratio -->
+    <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-lg overflow-visible relative" style="min-height: 720px;">
+        
+        <!-- Watermark -->
+        <div class="watermark" id="logo-watermark"></div>
+        
+        <!-- Content wrapper with z-index to appear above watermark -->
+        <div class="relative z-10 flex flex-col p-4 sm:p-5">
+            
+            <!-- Header -->
+            <div class="mb-3">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h1 class="text-[clamp(2rem,5vw,2.5rem)] font-extrabold bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent mb-1.5 drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
+                            Still Waiting NI
+                        </h1>
+                        <p class="text-[13px] sm:text-sm font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                            A&E Wait Times
+                        </p>
+                        <div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-slate-400">
+                            <svg class="h-3.5 w-3.5 text-cyan-400" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                                <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <span class="text-slate-300">Updated:</span> <span class="text-slate-300" id="update-time">12:00 am, Fri 17 Oct 2025</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Right: Facebook Link & Data Source -->
+                    <div class="flex flex-col items-end gap-1.5">
+                        <div class="flex items-center gap-2">
+                            <svg class="h-5 w-5 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            </svg>
+                            <span class="text-sm font-bold uppercase tracking-wider text-slate-300">fb.me/NIERV</span>
+                        </div>
+                        <!-- Data Source -->
+                        <div class="flex items-center gap-2 text-sm text-slate-400">
+                            <svg class="h-4 w-4 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span class="font-medium text-slate-300">Average over past 4 hours | Source: NI Direct</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Combined Banner: Headline (left) + Hourly Trend (right) -->
+            <div class="mb-3 rounded-xl bg-gradient-to-r from-slate-800/50 to-slate-900/50 border border-slate-700/50 px-3 sm:px-4 py-2.5 backdrop-blur-sm">
+                <div class="flex items-center justify-between gap-4">
+                    <!-- Left: Headline Story -->
+                    <div class="flex items-center gap-2.5 flex-1" id="headline-container">
+                        <!-- SVG Icon (larger) -->
+                        <svg class="h-6 w-6 flex-shrink-0 text-cyan-400" id="headline-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <!-- Headline Text (larger) -->
+                        <span id="headline-text" class="text-[13px] sm:text-[15px] font-bold text-slate-100 leading-snug">
+                            Waits easing — average down 8% in last hour.
+                        </span>
+                    </div>
+                    
+                    <!-- Right: Hourly Trend -->
+                    <div class="text-right flex-shrink-0">
+                        <div class="text-[15px] sm:text-base font-bold text-slate-200" id="hourly-trend">
+                            <span class="text-emerald-400">↓ 8%</span> since last hour
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content: Table on Left, Stats on Right -->
+            <div class="main-content mb-3">
+                <!-- Left: Table -->
+                <div class="table-section flex flex-col">
+                    <div class="rounded-2xl border border-slate-800 bg-slate-900 shadow-[0_0_20px_rgba(0,0,0,0.3)] overflow-hidden flex-1 flex flex-col">
+                        <table class="w-full h-full">
+                            <thead class="sticky top-0 bg-slate-900/95 backdrop-blur-sm">
+                                <tr class="border-b border-slate-800">
+                                    <th class="py-2.5 px-6 text-left text-xs font-bold uppercase tracking-wider text-slate-200">Status</th>
+                                    <th class="py-2.5 px-6 text-left text-xs font-bold uppercase tracking-wider text-slate-200">Wait</th>
+                                    <th class="py-2.5 px-6 text-left text-xs font-bold uppercase tracking-wider text-slate-200">Hospital</th>
+                                    <th class="py-2.5 px-6 text-center text-xs font-bold uppercase tracking-wider text-slate-200">Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hospital-table" class="divide-y divide-slate-800/50">
+                                <!-- Sample rows - will be replaced by JavaScript -->
+                                <tr>
+                                    <td class="py-2.5 px-6">
+                                        <span class="inline-flex h-3.5 w-3.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]"></span>
+                                    </td>
+                                    <td class="py-2.5 px-6">
+                                        <span class="inline-flex items-center rounded-md bg-rose-500/20 px-3 py-1.5 text-base font-bold text-rose-400">
+                                            317m
+                                        </span>
+                                    </td>
+                                    <td class="py-2.5 px-6 text-[15px] sm:text-base font-semibold text-slate-100">Altnagelvin Area ED</td>
+                                    <td class="py-2.5 px-6 text-center">
+                                        <svg class="inline-block h-6 w-6 text-rose-400" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 4l-8 8h5v8h6v-8h5z"/>
+                                        </svg>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-6">
+                                        <span class="inline-flex h-3.5 w-3.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]"></span>
+                                    </td>
+                                    <td class="py-2.5 px-6">
+                                        <span class="inline-flex items-center rounded-md bg-rose-500/20 px-3 py-1.5 text-base font-bold text-rose-400">
+                                            281m
+                                        </span>
+                                    </td>
+                                    <td class="py-2.5 px-6 text-[15px] sm:text-base font-semibold text-slate-100">Royal Victoria ED</td>
+                                    <td class="py-2.5 px-6 text-center">
+                                        <svg class="inline-block h-6 w-6 text-rose-400" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 4l-8 8h5v8h6v-8h5z"/>
+                                        </svg>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-6">
+                                        <span class="inline-flex h-3.5 w-3.5 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></span>
+                                    </td>
+                                    <td class="py-2.5 px-6">
+                                        <span class="inline-flex items-center rounded-md bg-orange-500/20 px-3 py-1.5 text-base font-bold text-orange-400">
+                                            238m
+                                        </span>
+                                    </td>
+                                    <td class="py-2.5 px-6 text-[15px] sm:text-base font-semibold text-slate-100">Ulster ED</td>
+                                    <td class="py-2.5 px-6 text-center"></td>
+                                </tr>
+                                <!-- JavaScript will replace all rows above with live data -->
+                            </tbody>
+                        </table>
+                        
+                        <!-- Severity Key - Static Gradient Bar with Overlaid Labels -->
+                        <div class="relative mt-3 mx-6 mb-4">
+                            <!-- Gradient Bar (No Animation) -->
+                            <div class="relative h-10 rounded-lg overflow-hidden shadow-inner">
+                                <!-- Static gradient background -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-emerald-500 via-yellow-500 via-orange-500 to-rose-600"></div>
+                                
+                                <!-- Semi-transparent overlay for better text contrast -->
+                                <div class="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40"></div>
+                                
+                                <!-- Labels overlaid on gradient -->
+                                <div class="absolute inset-0 grid grid-cols-4 items-center text-center">
+                                    <div class="px-2">
+                                        <div class="text-xs sm:text-sm font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">&lt;60m</div>
+                                    </div>
+                                    <div class="px-2">
+                                        <div class="text-xs sm:text-sm font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">60–119m</div>
+                                    </div>
+                                    <div class="px-2">
+                                        <div class="text-xs sm:text-sm font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">120–239m</div>
+                                    </div>
+                                    <div class="px-2">
+                                        <div class="text-xs sm:text-sm font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">&gt;240m</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Stats and Trend -->
+                <div class="stats-section">
+                    <!-- 24-Hour Trend Graph -->
+                    <div class="rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-lg shadow-black/30" id="trend-section" style="display: none;">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/15 text-purple-400">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">24-Hour Trend</span>
+                        </div>
+                        <svg id="sparkline" width="100%" height="50" class="sparkline mb-2"></svg>
+                        <div class="text-sm text-gray-500" id="trend-change"></div>
+                    </div>
+
+                    <!-- Average Wait (moved to top) -->
+                    <div class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800 p-4 shadow-lg shadow-black/30">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-accent-500/15 text-accent-400">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <span class="text-sm sm:text-base font-bold uppercase tracking-wider text-slate-300">Average Wait</span>
+                        </div>
+                        
+                        <!-- Value -->
+                        <div class="mb-3">
+                            <span class="block text-3xl font-extrabold text-slate-100 drop-shadow-[0_0_12px_rgba(6,182,212,0.5)]" id="avg-wait">187m</span>
+                            <span class="mt-1 inline-flex items-center gap-1 text-base font-bold" id="avg-wait-trend">
+                                <svg class="h-4 w-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                <span class="text-emerald-400">8% vs 1h ago</span>
+                            </span>
+                        </div>
+                        
+                        <!-- Enhanced gradient bar with glow and animation -->
+                        <div class="relative mb-2">
+                            <!-- Outer glow container -->
+                            <div class="absolute inset-0 rounded-full blur-sm opacity-50" id="avg-wait-bar-glow" style="background: linear-gradient(to right, #10b981 0%, #fbbf24 33%, #fb923c 66%, #ef4444 100%); width: 59%; transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                            
+                            <!-- Track background -->
+                            <div class="relative h-3 w-full overflow-hidden rounded-full bg-slate-800/50 border border-slate-700/50">
+                                <!-- Animated shimmer effect -->
+                                <div class="absolute inset-0 opacity-20">
+                                    <div class="h-full w-full animate-shimmer" style="background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%); background-size: 200% 100%; animation: shimmer 3s infinite;"></div>
+                                </div>
+                                
+                                <!-- Main gradient bar -->
+                                <div class="relative h-full rounded-full shadow-lg" 
+                                     id="avg-wait-bar" 
+                                     style="background: linear-gradient(to right, #10b981 0%, #fbbf24 33%, #fb923c 66%, #ef4444 100%); 
+                                            width: 59%; 
+                                            transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+                                            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);">
+                                    <!-- Glossy overlay -->
+                                    <div class="absolute inset-0 rounded-full" style="background: linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.1) 100%);"></div>
+                                    
+                                    <!-- Indicator dot at end -->
+                                    <div class="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-white shadow-lg" style="box-shadow: 0 0 12px rgba(255,255,255,0.8), 0 0 6px rgba(6,182,212,0.6);">
+                                        <div class="absolute inset-0 rounded-full bg-cyan-400 animate-ping opacity-75"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <style>
+                            @keyframes shimmer {
+                                0% { background-position: -200% 0; }
+                                100% { background-position: 200% 0; }
+                            }
+                        </style>
+                        
+                        <!-- Context label -->
+                        <div class="flex items-center justify-between text-sm font-semibold text-slate-200">
+                            <span id="avg-wait-context">59% of max (317m)</span>
+                            <span class="flex items-center gap-1">
+                                <svg class="h-3 w-3 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="text-emerald-400">Improving</span>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Trend Direction -->
+                    <div class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800 p-4 shadow-lg shadow-black/30">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <span class="text-sm sm:text-base font-bold uppercase tracking-wider text-slate-300">Trend Direction</span>
+                        </div>
+                        
+                        <!-- Split indicators -->
+                        <div class="grid grid-cols-2 gap-3 mb-2">
+                            <!-- Improving -->
+                            <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5">
+                                <div class="text-3xl font-extrabold text-emerald-400" id="improving-count">6</div>
+                                <div class="text-xs font-bold uppercase tracking-wider text-emerald-300" id="improving-label">IMPROVING</div>
+                            </div>
+                            
+                            <!-- Worsening -->
+                            <div class="rounded-lg bg-rose-500/10 border border-rose-500/20 p-2.5">
+                                <div class="text-3xl font-extrabold text-rose-400" id="worsening-count">4</div>
+                                <div class="text-xs font-bold uppercase tracking-wider text-rose-300" id="worsening-label">WORSENING</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Micro bar comparison -->
+                        <div class="flex h-1.5 overflow-hidden rounded-full bg-slate-800">
+                            <div class="bg-emerald-500" id="improving-bar" style="width: 60%"></div>
+                            <div class="bg-rose-500" id="worsening-bar" style="width: 40%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/20 p-4 shadow-lg shadow-black/30">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path d="M13 17l5-5m0 0l-5-5m5 5H6" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <span class="text-sm sm:text-base font-bold uppercase tracking-wider text-slate-300">Fastest Improvement</span>
+                        </div>
+                        <!-- Hospital name -->
+                        <div class="mb-3">
+                            <div class="text-[17px] sm:text-lg font-extrabold text-emerald-400 drop-shadow-[0_0_6px_rgba(16,185,129,0.3)]" id="fastest-improvement-name">
+                                Ulster ED
+                            </div>
+                        </div>
+                        
+                        <!-- Before/After comparison -->
+                        <div class="flex items-center justify-between gap-3">
+                            <!-- Before -->
+                            <div class="flex-1">
+                                <div class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200 mb-1">Before</div>
+                                <div class="rounded-lg bg-slate-800/50 px-3 py-2 text-center">
+                                    <span class="text-xl font-bold text-slate-300" id="fastest-improvement-before">127m</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Arrow -->
+                            <div class="flex flex-col items-center">
+                                <svg class="h-6 w-6 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="text-sm font-bold text-emerald-400" id="fastest-improvement-diff">-21m</span>
+                            </div>
+                            
+                            <!-- After -->
+                            <div class="flex-1">
+                                <div class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200 mb-1">After</div>
+                                <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 text-center">
+                                    <span class="text-xl font-bold text-emerald-400" id="fastest-improvement-after">106m</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Biggest Change (24h) -->
+                    <div class="rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900 to-slate-800 p-4 shadow-lg shadow-black/30">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <span class="text-sm font-bold uppercase tracking-wider text-slate-300">Biggest Change (24h)</span>
+                        </div>
+                        
+                        <!-- Split view: Increase and Decrease -->
+                        <div class="space-y-3">
+                            <!-- Biggest Increase (Worst Jump) -->
+                            <div class="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <span class="text-xs sm:text-sm font-bold uppercase tracking-wider text-rose-300">Worst Jump</span>
+                                    <svg class="h-4 w-4 text-rose-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                                <div class="text-[17px] sm:text-lg font-extrabold text-rose-400 drop-shadow-[0_0_6px_rgba(244,63,94,0.3)]" id="biggest-increase">Antrim ↑ +92m</div>
+                                <div class="text-sm text-slate-400 mt-1">vs yesterday</div>
+                            </div>
+                            
+                            <!-- Biggest Decrease (Best Drop) -->
+                            <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <span class="text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-300">Best Drop</span>
+                                    <svg class="h-4 w-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                                <div class="text-[17px] sm:text-lg font-extrabold text-emerald-400 drop-shadow-[0_0_6px_rgba(16,185,129,0.3)]" id="biggest-decrease">Ulster ↓ −36m</div>
+                                <div class="text-sm text-slate-400 mt-1">vs yesterday</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Regional Pressure Index -->
+                    <div class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800 p-4 shadow-lg shadow-black/30">
+                        <!-- Header with status badge -->
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </span>
+                                <span class="text-sm font-bold uppercase tracking-wider text-slate-300">Regional Pressure</span>
+                            </div>
+                            <span class="rounded-md bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-400" id="pressure-status">High</span>
+                        </div>
+                        
+                        <!-- Value -->
+                        <div class="mb-3">
+                            <span class="text-3xl font-extrabold text-slate-100 drop-shadow-[0_0_8px_rgba(251,146,60,0.3)]" id="pressure-percentage">72%</span>
+                            <span class="ml-2 text-base font-semibold text-slate-300">hospitals > 2h</span>
+                        </div>
+                        
+                        <!-- Segmented indicator with grid -->
+                        <div class="grid grid-cols-3 gap-[2px] mb-2">
+                            <!-- Safe zone (0-50%) -->
+                            <div class="relative h-3 overflow-hidden rounded-sm bg-emerald-500/20">
+                                <div class="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-500" id="pressure-safe-fill" style="width: 0%"></div>
+                            </div>
+                            
+                            <!-- Moderate zone (50-75%) -->
+                            <div class="relative h-3 overflow-hidden rounded-sm bg-amber-500/20">
+                                <div class="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-500" id="pressure-moderate-fill" style="width: 0%"></div>
+                            </div>
+                            
+                            <!-- Critical zone (75-100%) -->
+                            <div class="relative h-3 overflow-hidden rounded-sm bg-rose-500/20">
+                                <div class="absolute inset-0 bg-gradient-to-r from-rose-400 to-rose-500" id="pressure-critical-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Legend with indicators -->
+                        <div class="flex justify-between text-[11px] font-bold uppercase tracking-wide">
+                            <span class="flex items-center gap-1 text-emerald-400">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                                Safe
+                            </span>
+                            <span class="flex items-center gap-1 text-amber-400">
+                                <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                                Moderate
+                            </span>
+                            <span class="flex items-center gap-1 text-rose-400">
+                                <span class="h-1.5 w-1.5 rounded-full bg-rose-400"></span>
+                                Critical
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-1.5 border-t border-slate-800/60 pt-1.5 pb-1">
+                <!-- Powered by (single line, centered) -->
+                <div class="text-center">
+                    <p class="text-[15px] font-semibold uppercase tracking-wider text-slate-500">
+                        <span class="scale-90 inline-block">⚡</span> Powered by <span class="font-bold text-white">NI Emergency Response Vids</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set logo images
+        function setLogo(logoPath) {
+            document.getElementById('logo-image').src = logoPath;
+            document.getElementById('logo-watermark').style.backgroundImage = `url('${logoPath}')`;
+        }
+        
+        // Theme switching
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+            } else {
+                document.body.removeAttribute('data-theme');
+            }
+        }
+        
+        // Auto-load watermark on page load (for testing)
+        window.addEventListener('DOMContentLoaded', function() {
+            // Try to load logo - adjust path as needed
+            const logoPath = 'NIERV Logo.jpg'; // or 'NIERV Logo.jpg' or 'logo.png'
+            document.getElementById('logo-watermark').style.backgroundImage = `url('${logoPath}')`;
+            
+            // Check for theme parameter in URL or data
+            // For testing, you can add ?theme=dark to URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const themeParam = urlParams.get('theme');
+            
+            // DEFAULT TO DARK MODE (for testing)
+            if (themeParam === 'light') {
+                setTheme('light');  // Only use light if explicitly requested
+            } else {
+                setTheme('dark');   // Default to dark
+            }
+            
+            // Initialize gauge with sample data
+            const sampleHospitals = [
+                { wait: 317 }, { wait: 281 }, { wait: 238 }, { wait: 220 },
+                { wait: 162 }, { wait: 157 }, { wait: 152 }, { wait: 131 },
+                { wait: 119 }, { wait: 86 }
+            ];
+            updateAverageWaitGauge(sampleHospitals);
+        });
+        
+        // Draw sparkline graph
+        function drawSparkline(data, containerId) {
+            const svg = document.getElementById(containerId);
+            const width = svg.clientWidth;
+            const height = 60;
+            const padding = 5;
+            
+            if (!data || data.length < 2) return;
+            
+            const max = Math.max(...data);
+            const min = Math.min(...data);
+            const range = max - min || 1;
+            
+            // Create points
+            const points = data.map((value, index) => {
+                const x = padding + (index / (data.length - 1)) * (width - 2 * padding);
+                const y = height - padding - ((value - min) / range) * (height - 2 * padding);
+                return `${x},${y}`;
+            }).join(' ');
+            
+            // Determine color based on trend
+            const isRising = data[data.length - 1] > data[0];
+            const color = isRising ? '#ef4444' : '#10b981'; // red if rising, green if falling
+            
+            // Clear and draw
+            svg.innerHTML = `
+                <polyline 
+                    points="${points}" 
+                    stroke="${color}" 
+                    stroke-width="3"
+                    fill="none"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+                ${data.map((value, index) => {
+                    const x = padding + (index / (data.length - 1)) * (width - 2 * padding);
+                    const y = height - padding - ((value - min) / range) * (height - 2 * padding);
+                    return `<circle cx="${x}" cy="${y}" r="2.5" fill="${color}" opacity="0.6"/>`;
+                }).join('')}
+            `;
+        }
+        
+        // Update average wait enhanced gradient bar
+        function updateAverageWaitGauge(hospitals) {
+            // Filter valid wait times
+            const validWaits = hospitals
+                .filter(h => h.wait !== 'N/A' && typeof h.wait === 'number')
+                .map(h => h.wait);
+            
+            if (validWaits.length === 0) return;
+            
+            // Calculate max and average
+            const maxWait = Math.max(...validWaits);
+            const avgWait = Math.round(validWaits.reduce((sum, w) => sum + w, 0) / validWaits.length);
+            
+            // Note: Average wait text is updated by safeUpdate() from Python data
+            // We only update the gauge bar and context here
+            
+            // Calculate percentage
+            const percentage = (avgWait / maxWait) * 100;
+            
+            // Update bar width with animation
+            const bar = document.getElementById('avg-wait-bar');
+            const glow = document.getElementById('avg-wait-bar-glow');
+            
+            if (bar) {
+                bar.style.width = percentage + '%';
+            }
+            if (glow) {
+                glow.style.width = percentage + '%';
+            }
+            
+            // Update context label
+            const contextLabel = document.getElementById('avg-wait-context');
+            if (contextLabel) {
+                contextLabel.textContent = `${Math.round(percentage)}% of max (${maxWait}m)`;
+            }
+        }
+        
+        // JavaScript to populate data dynamically
+        // This will be replaced by Python when generating the image
+        function updateDashboard(data) {
+            console.log('[updateDashboard] Called with data:', data);
+            console.log('[updateDashboard] Hospitals count:', data.hospitals ? data.hospitals.length : 0);
+            
+            // Set logo if provided
+            if (data.logoPath) {
+                setLogo(data.logoPath);
+            }
+            
+            // Helper to safely update element
+            const safeUpdate = (id, value, isHTML = false) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (isHTML) el.innerHTML = value;
+                    else el.textContent = value;
+                } else {
+                    console.warn(`[updateDashboard] Element not found: ${id}`);
+                }
+            };
+            
+            // Update time
+            safeUpdate('update-time', data.updateTime);
+            
+            // Update hourly trend (if provided)
+            if (data.hourlyTrend) {
+                safeUpdate('hourly-trend', data.hourlyTrend, true);
+                // Also update the Average Wait card's trend display
+                safeUpdate('avg-wait-trend', data.hourlyTrend, true);
+            }
+            
+            // Update headline (if provided)
+            if (data.headline) {
+                safeUpdate('headline-text', data.headline);
+                
+                // Update icon based on headline content
+                const iconEl = document.getElementById('headline-icon');
+                const containerEl = document.getElementById('headline-container');
+                
+                if (iconEl && containerEl) {
+                    let iconSVG = '';
+                    let iconColor = 'text-cyan-400';
+                    
+                    // Determine icon based on headline keywords
+                    if (data.headline.includes('easing') || data.headline.includes('recovery') || data.headline.includes('improving')) {
+                        // Trending down / improving
+                        iconSVG = '<path d="M13 17l5-5m0 0l-5-5m5 5H6" stroke-linecap="round" stroke-linejoin="round"/>';
+                        iconColor = 'text-emerald-400';
+                    } else if (data.headline.includes('strain') || data.headline.includes('pressure') || data.headline.includes('rising')) {
+                        // Alert / warning
+                        iconSVG = '<path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round"/>';
+                        iconColor = 'text-rose-400';
+                    } else if (data.headline.includes('steady') || data.headline.includes('stable') || data.headline.includes('variance')) {
+                        // Stable / consistent
+                        iconSVG = '<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>';
+                        iconColor = 'text-purple-400';
+                    } else if (data.headline.includes('Mixed')) {
+                        // Mixed signals
+                        iconSVG = '<path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" stroke-linecap="round" stroke-linejoin="round"/>';
+                        iconColor = 'text-amber-400';
+                    } else {
+                        // Default - info/news
+                        iconSVG = '<path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>';
+                        iconColor = 'text-cyan-400';
+                    }
+                    
+                    iconEl.innerHTML = iconSVG;
+                    iconEl.className = `h-6 w-6 flex-shrink-0 ${iconColor}`;
+                }
+            }
+            
+            // Update stats (only if elements exist)
+            safeUpdate('longest-wait', data.longestWait, true);
+            safeUpdate('avg-wait', data.avgWait, true);
+            
+            // Update average wait gauge
+            updateAverageWaitGauge(data.hospitals);
+            
+            // Calculate and display shortest wait
+            const validHospitals = data.hospitals.filter(h => h.wait !== 'N/A');
+            if (validHospitals.length > 0) {
+                const shortest = validHospitals.reduce((min, h) => h.wait < min.wait ? h : min);
+                safeUpdate('shortest-wait', `${shortest.name} — <span class="${shortest.colorClass}">${shortest.wait}m ${shortest.emoji}</span>`, true);
+            }
+            
+            // Update trend graph if available
+            if (data.trendData && data.trendData.length > 1) {
+                const trendSection = document.getElementById('trend-section');
+                if (trendSection) {
+                    trendSection.style.display = 'block';
+                    drawSparkline(data.trendData, 'sparkline');
+                    
+                    // Show trend change
+                    const first = data.trendData[0];
+                    const last = data.trendData[data.trendData.length - 1];
+                    const change = last - first;
+                    const changeText = change > 0 
+                        ? `<span class="text-red-500">↑ +${change}m over 24h</span>`
+                        : `<span class="text-green-500">↓ ${change}m over 24h</span>`;
+                    safeUpdate('trend-change', changeText, true);
+                }
+            }
+            
+            // Calculate severity counts
+            const under60 = data.hospitals.filter(h => h.wait !== 'N/A' && h.wait < 60).length;
+            const over240 = data.hospitals.filter(h => h.wait !== 'N/A' && h.wait >= 240).length;
+            
+            // Update severity counts (only if elements exist)
+            safeUpdate('under-60-count', under60);
+            safeUpdate('over-240-count', over240);
+            
+            // Update Fastest Improvement before/after (if data provided)
+            if (data.fastestImprovementDetail) {
+                const detail = data.fastestImprovementDetail;
+                safeUpdate('fastest-improvement-name', detail.name);
+                safeUpdate('fastest-improvement-before', detail.before + 'm');
+                safeUpdate('fastest-improvement-after', detail.after + 'm');
+                safeUpdate('fastest-improvement-diff', (detail.diff > 0 ? '+' : '') + detail.diff + 'm');
+            }
+            
+            // Update Trend Direction split (use direct counts if provided, otherwise parse string)
+            if (data.improvingCount !== undefined && data.worseningCount !== undefined) {
+                // Use direct count values
+                const improving = data.improvingCount;
+                const worsening = data.worseningCount;
+                const total = improving + worsening;
+                
+                // Update counts
+                document.getElementById('improving-count').textContent = improving;
+                document.getElementById('worsening-count').textContent = worsening;
+                
+                // Update bar widths
+                if (total > 0) {
+                    const improvingPct = (improving / total) * 100;
+                    const worseningPct = (worsening / total) * 100;
+                    document.getElementById('improving-bar').style.width = improvingPct + '%';
+                    document.getElementById('worsening-bar').style.width = worseningPct + '%';
+                }
+            } else if (data.trendDirection) {
+                // Fallback: Parse "6 improving | 4 worsening" format
+                const improvingMatch = data.trendDirection.match(/(\d+)\s+improving/i);
+                const worseningMatch = data.trendDirection.match(/(\d+)\s+worsening/i);
+                
+                if (improvingMatch && worseningMatch) {
+                    const improving = parseInt(improvingMatch[1]);
+                    const worsening = parseInt(worseningMatch[1]);
+                    const total = improving + worsening;
+                    
+                    // Update counts
+                    document.getElementById('improving-count').textContent = improving;
+                    document.getElementById('worsening-count').textContent = worsening;
+                    
+                    // Update bar widths
+                    if (total > 0) {
+                        const improvingPct = (improving / total) * 100;
+                        const worseningPct = (worsening / total) * 100;
+                        document.getElementById('improving-bar').style.width = improvingPct + '%';
+                        document.getElementById('worsening-bar').style.width = worseningPct + '%';
+                    }
+                }
+            }
+            
+            // Update Biggest Change (24h) (if data provided)
+            if (data.biggestChange24h) {
+                // Update biggest increase (worst jump) - use HTML mode for SVG icons
+                if (data.biggestChange24h.increase) {
+                    safeUpdate('biggest-increase', data.biggestChange24h.increase, true);
+                }
+                
+                // Update biggest decrease (best drop) - use HTML mode for SVG icons
+                if (data.biggestChange24h.decrease) {
+                    safeUpdate('biggest-decrease', data.biggestChange24h.decrease, true);
+                }
+            }
+            
+            // Update Regional Pressure (if data provided)
+            if (data.pressureIndex) {
+                // Parse "72% hospitals over 2h" format
+                const percentageMatch = data.pressureIndex.match(/(\d+)%/);
+                
+                if (percentageMatch) {
+                    const percentage = parseInt(percentageMatch[1]);
+                    
+                    // Update percentage display
+                    safeUpdate('pressure-percentage', percentage + '%');
+                    
+                    // Update segmented bars based on percentage
+                    const safeFill = document.getElementById('pressure-safe-fill');
+                    const moderateFill = document.getElementById('pressure-moderate-fill');
+                    const criticalFill = document.getElementById('pressure-critical-fill');
+                    
+                    if (safeFill && moderateFill && criticalFill) {
+                        // Calculate fill for each zone
+                        if (percentage <= 50) {
+                            // In safe zone (0-50%)
+                            safeFill.style.width = (percentage / 50 * 100) + '%';
+                            moderateFill.style.width = '0%';
+                            criticalFill.style.width = '0%';
+                        } else if (percentage <= 75) {
+                            // In moderate zone (50-75%)
+                            safeFill.style.width = '100%';
+                            moderateFill.style.width = ((percentage - 50) / 25 * 100) + '%';
+                            criticalFill.style.width = '0%';
+                        } else {
+                            // In critical zone (75-100%)
+                            safeFill.style.width = '100%';
+                            moderateFill.style.width = '100%';
+                            criticalFill.style.width = ((percentage - 75) / 25 * 100) + '%';
+                        }
+                    }
+                    
+                    // Update status badge based on percentage
+                    const statusBadge = document.getElementById('pressure-status');
+                    if (statusBadge) {
+                        let status, badgeClass;
+                        
+                        if (percentage < 50) {
+                            status = 'Low';
+                            badgeClass = 'bg-emerald-500/15 text-emerald-400';
+                        } else if (percentage < 75) {
+                            status = 'Moderate';
+                            badgeClass = 'bg-amber-500/15 text-amber-400';
+                        } else {
+                            status = 'High';
+                            badgeClass = 'bg-rose-500/15 text-rose-400';
+                        }
+                        
+                        statusBadge.textContent = status;
+                        statusBadge.className = `rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${badgeClass}`;
+                    }
+                }
+            }
+            
+            // Helper function to generate severity dot
+            function getSeverityDot(wait) {
+                let color, shadowColor;
+                
+                if (wait >= 240) {
+                    color = '#EF4444'; // rose-500
+                    shadowColor = 'rgba(239,68,68,0.6)';
+                } else if (wait >= 120) {
+                    color = '#F97316'; // orange-500
+                    shadowColor = 'rgba(249,115,22,0.6)';
+                } else if (wait >= 60) {
+                    color = '#EAB308'; // yellow-500
+                    shadowColor = 'rgba(234,179,8,0.6)';
+                } else {
+                    color = '#10B981'; // emerald-500
+                    shadowColor = 'rgba(16,185,129,0.6)';
+                }
+                
+                return `<span class="inline-flex h-3.5 w-3.5 rounded-full" style="background-color: ${color}; box-shadow: 0 0 10px ${shadowColor}"></span>`;
+            }
+            
+            // Helper function to generate wait time badge
+            function getWaitBadge(wait) {
+                let bgClass, textClass;
+                
+                if (wait >= 240) {
+                    bgClass = 'bg-rose-500/20';
+                    textClass = 'text-rose-400';
+                } else if (wait >= 120) {
+                    bgClass = 'bg-orange-500/20';
+                    textClass = 'text-orange-400';
+                } else if (wait >= 60) {
+                    bgClass = 'bg-yellow-500/20';
+                    textClass = 'text-yellow-400';
+                } else {
+                    bgClass = 'bg-emerald-500/20';
+                    textClass = 'text-emerald-400';
+                }
+                
+                return `<span class="inline-flex items-center rounded-md ${bgClass} px-3 py-1.5 text-base font-bold ${textClass}">${wait}m</span>`;
+            }
+            
+            // Helper function to generate trend arrow SVG
+            function getTrendArrowSVG(trend) {
+                if (!trend) return '';
+                
+                if (trend === 'up') {
+                    return `<svg class="inline-block h-6 w-6 text-rose-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 4l-8 8h5v8h6v-8h5z"/>
+                            </svg>`;
+                } else {
+                    return `<svg class="inline-block h-6 w-6 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 20l8-8h-5V4H9v8H4z"/>
+                            </svg>`;
+                }
+            }
+            
+            // Update table
+            const tbody = document.getElementById('hospital-table');
+            console.log('[updateDashboard] Populating table with', data.hospitals.length, 'hospitals');
+            tbody.innerHTML = data.hospitals.map(h => `
+                <tr>
+                    <td class="py-2.5 px-6">${getSeverityDot(h.wait)}</td>
+                    <td class="py-2.5 px-6">${getWaitBadge(h.wait)}</td>
+                    <td class="py-2.5 px-6 text-[15px] sm:text-base font-semibold text-slate-100">${h.name}</td>
+                    <td class="py-2.5 px-6 text-center">${getTrendArrowSVG(h.trend)}</td>
+                </tr>
+            `).join('');
+            console.log('[updateDashboard] Table populated. Row count:', tbody.querySelectorAll('tr').length);
+        }
+        
+        // Example data structure for Python integration
+        /*
+        const sampleData = {
+            updateTime: "12:00 am, Fri 17 Oct 2025",
+            longestWait: 'Altnagelvin — <span class="text-red-600">317m 🔴</span>',
+            avgWait: '<span class="text-orange-500">187m 🟠</span>',
+            hospitalCount: 10,
+            hospitals: [
+                { emoji: '🔴', wait: 317, name: 'Altnagelvin Area ED', colorClass: 'text-red-600' },
+                // ... more hospitals
+            ]
+        };
+        */
+    </script>
+</body>
+</html>

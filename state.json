@@ -1,0 +1,17 @@
+{
+  "digest": "656efdf149e0f292883506e7fa9de2e9989b04911c04aaf907f992011cca1325",
+  "last_sent": "2025-10-18 22:45:14 GMT Summer Time",
+  "last_message_id": 418,
+  "previous_waits": {
+    "Antrim AreaED": 307,
+    "Royal Victoria ED": 251,
+    "Craigavon AreaED": 196,
+    "Mater ED": 172,
+    "Royal Children’s ED": 151,
+    "South West Acute ED": 147,
+    "Altnagelvin AreaED": 115,
+    "Ulster ED": 114,
+    "Daisy Hill ED": 106,
+    "Causeway AreaED": 96
+  }
+}

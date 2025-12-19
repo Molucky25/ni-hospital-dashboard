@@ -1,0 +1,164 @@
+{
+  "hospitals": {
+    "Mater HospitalEmergency Department": [
+      134,
+      134,
+      166,
+      166,
+      166,
+      166
+    ],
+    "Craigavon Area HospitalEmergency Department": [
+      166,
+      166,
+      166,
+      166,
+      166,
+      166
+    ],
+    "Royal Victoria HospitalEmergency Department": [
+      167,
+      167,
+      167,
+      167,
+      167,
+      167
+    ],
+    "South West Acute HospitalEmergency Department": [
+      304,
+      304,
+      320,
+      320,
+      320,
+      320
+    ],
+    "Antrim Area HospitalEmergency Department": [
+      445,
+      445,
+      433,
+      433,
+      433,
+      433
+    ],
+    "Altnagelvin Area HospitalEmergency Department": [
+      238,
+      238,
+      231,
+      231,
+      231,
+      231
+    ],
+    "Ulster HospitalEmergency Department": [
+      105,
+      105,
+      112,
+      112,
+      112,
+      112
+    ],
+    "Causeway Area HospitalEmergency Department": [
+      403,
+      403,
+      420,
+      420,
+      420,
+      420
+    ],
+    "Daisy Hill HospitalEmergency Department": [
+      147,
+      147,
+      143,
+      143,
+      143,
+      143
+    ],
+    "Royal Children\u2019s HospitalEmergency Department": [
+      372,
+      372,
+      91,
+      91,
+      91,
+      91
+    ],
+    "Antrim AreaED": [
+      285,
+      285,
+      285,
+      285,
+      292,
+      307
+    ],
+    "Causeway AreaED": [
+      136,
+      136,
+      136,
+      136,
+      146,
+      96
+    ],
+    "South West Acute ED": [
+      147,
+      147,
+      147,
+      147,
+      141,
+      147
+    ],
+    "Altnagelvin AreaED": [
+      99,
+      99,
+      99,
+      99,
+      108,
+      115
+    ],
+    "Royal Victoria ED": [
+      219,
+      219,
+      219,
+      219,
+      233,
+      251
+    ],
+    "Mater ED": [
+      182,
+      182,
+      182,
+      182,
+      169,
+      172
+    ],
+    "Craigavon AreaED": [
+      201,
+      201,
+      201,
+      201,
+      192,
+      196
+    ],
+    "Daisy Hill ED": [
+      86,
+      86,
+      86,
+      86,
+      93,
+      106
+    ],
+    "Ulster ED": [
+      103,
+      103,
+      103,
+      103,
+      109,
+      114
+    ],
+    "Royal Children\u2019s ED": [
+      149,
+      149,
+      149,
+      149,
+      145,
+      151
+    ]
+  }
+}

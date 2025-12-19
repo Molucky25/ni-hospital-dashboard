@@ -1,0 +1,59 @@
+{
+  "date": "2025-10-18",
+  "readings": [
+    {
+      "timestamp": "2025-10-18T21:47:05.063632",
+      "hour": 21,
+      "avg_wait": 162,
+      "hospitals": {
+        "Antrim AreaED": 292,
+        "Royal Victoria ED": 233,
+        "Craigavon AreaED": 192,
+        "Mater ED": 169,
+        "Causeway AreaED": 146,
+        "Royal Children\u2019s ED": 145,
+        "South West Acute ED": 141,
+        "Ulster ED": 109,
+        "Altnagelvin AreaED": 108,
+        "Daisy Hill ED": 93
+      },
+      "longest": {
+        "hospital": "Antrim AreaED",
+        "wait": 292
+      },
+      "has_critical": true
+    },
+    {
+      "fetched_at": "2025-10-18T22:45:14.147636",
+      "source_updated": "10.00 pm, Saturday 18 October 2025.",
+      "hour": 22,
+      "avg_wait": 165,
+      "hospitals": {
+        "Antrim AreaED": 307,
+        "Royal Victoria ED": 251,
+        "Craigavon AreaED": 196,
+        "Mater ED": 172,
+        "Royal Children\u2019s ED": 151,
+        "South West Acute ED": 147,
+        "Altnagelvin AreaED": 115,
+        "Ulster ED": 114,
+        "Daisy Hill ED": 106,
+        "Causeway AreaED": 96
+      },
+      "longest": {
+        "hospital": "Antrim AreaED",
+        "wait": 307
+      },
+      "has_critical": true
+    }
+  ],
+  "peak_hour": 22,
+  "peak_avg": 165,
+  "longest_wait": {
+    "hospital": "Antrim AreaED",
+    "wait": 307,
+    "time": "22:45"
+  },
+  "hours_critical": 2,
+  "yesterday_avg": null
+}

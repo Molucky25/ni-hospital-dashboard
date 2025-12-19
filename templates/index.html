@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NI Emergency Department Wait Times - Live Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ni-blue': '#0066cc',
+                        'ni-dark': '#1a1a2e',
+                        'ni-darker': '#0f0f1e',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in': 'fadeIn 0.5s ease-in',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'glow': 'glow 2s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        glow: {
+                            '0%, 100%': { boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)' },
+                            '50%': { boxShadow: '0 0 40px rgba(59, 130, 246, 0.8)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .severity-critical {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+        }
+        
+        .severity-high {
+            background: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
+        }
+        
+        .severity-moderate {
+            background: linear-gradient(135deg, #eab308 0%, #a16207 100%);
+        }
+        
+        .severity-low {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        }
+        
+        .severity-unknown {
+            background: linear-gradient(135deg, #6b7280 0%, #374151 100%);
+        }
+        
+        .hospital-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .hospital-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: scale(1.05);
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    
+    <!-- Header -->
+    <header class="glass-effect sticky top-0 z-50 border-b border-white/10">
+        <div class="container mx-auto px-4 py-4 sm:py-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-br from-blue-500 to-purple-600 p-3 rounded-xl shadow-lg">
+                        <i class="fas fa-hospital text-white text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl sm:text-3xl font-bold text-white">NI Emergency Departments</h1>
+                        <p class="text-sm text-gray-400">Live Wait Time Dashboard</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="refreshData()" class="glass-effect px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-all flex items-center gap-2">
+                        <i class="fas fa-sync-alt" id="refresh-icon"></i>
+                        <span class="hidden sm:inline">Refresh</span>
+                    </button>
+                    <div class="glass-effect px-4 py-2 rounded-lg">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span class="text-sm text-gray-300">Live</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        
+        <!-- Last Updated Banner -->
+        <div id="update-banner" class="glass-effect rounded-xl p-4 mb-6 border border-blue-500/30 animate-fade-in">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-clock text-blue-400 text-xl"></i>
+                    <div>
+                        <p class="text-sm text-gray-400">Last Updated</p>
+                        <p id="last-updated" class="text-white font-semibold">Loading...</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400">Auto-refresh in</span>
+                    <span id="countdown" class="text-blue-400 font-mono font-bold">60s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <!-- Stats will be populated here -->
+        </div>
+
+        <!-- Filter & Sort Controls -->
+        <div class="glass-effect rounded-xl p-4 sm:p-6 mb-6">
+            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="filterBySeverity('all')" class="filter-btn active px-4 py-2 rounded-lg text-sm font-medium transition-all" data-filter="all">
+                        All Hospitals
+                    </button>
+                    <button onclick="filterBySeverity('critical')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-all" data-filter="critical">
+                        <i class="fas fa-circle text-red-500 text-xs"></i> Critical
+                    </button>
+                    <button onclick="filterBySeverity('high')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-all" data-filter="high">
+                        <i class="fas fa-circle text-orange-500 text-xs"></i> High
+                    </button>
+                    <button onclick="filterBySeverity('moderate')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-all" data-filter="moderate">
+                        <i class="fas fa-circle text-yellow-500 text-xs"></i> Moderate
+                    </button>
+                    <button onclick="filterBySeverity('low')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-all" data-filter="low">
+                        <i class="fas fa-circle text-green-500 text-xs"></i> Low
+                    </button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="text-sm text-gray-400">Sort by:</label>
+                    <select id="sort-select" onchange="sortHospitals(this.value)" class="glass-effect px-4 py-2 rounded-lg text-white border border-white/10 focus:border-blue-500 focus:outline-none">
+                        <option value="wait-desc">Wait Time (High to Low)</option>
+                        <option value="wait-asc">Wait Time (Low to High)</option>
+                        <option value="name-asc">Name (A-Z)</option>
+                        <option value="name-desc">Name (Z-A)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="flex flex-col items-center justify-center py-20">
+            <div class="loading-spinner mb-4"></div>
+            <p class="text-gray-400 text-lg">Loading wait times...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden glass-effect rounded-xl p-8 text-center border border-red-500/30">
+            <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
+            <h3 class="text-xl font-bold text-white mb-2">Unable to Load Data</h3>
+            <p class="text-gray-400 mb-4">There was an error fetching the wait times. Please try again.</p>
+            <button onclick="refreshData()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg text-white font-medium transition-all">
+                <i class="fas fa-redo mr-2"></i>Retry
+            </button>
+        </div>
+
+        <!-- Hospitals Grid -->
+        <div id="hospitals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+            <!-- Hospital cards will be populated here -->
+        </div>
+
+        <!-- Info Section -->
+        <div class="glass-effect rounded-xl p-6 mt-8 border border-white/10">
+            <div class="flex items-start gap-4">
+                <i class="fas fa-info-circle text-blue-400 text-2xl mt-1"></i>
+                <div>
+                    <h3 class="text-lg font-bold text-white mb-2">Important Information</h3>
+                    <ul class="text-gray-400 space-y-2 text-sm">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>Wait times are updated hourly and represent an average over the past 4 hours</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>A&E triage ensures the most urgent cases are treated first</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>If you have a life-threatening emergency, call 999 immediately</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>Consider alternatives like Minor Injury Units for non-urgent care</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Severity Key -->
+        <div class="glass-effect rounded-xl p-6 mt-6 border border-white/10">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-palette text-purple-400"></i>
+                Severity Key
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                    <div class="w-4 h-4 rounded-full bg-green-500"></div>
+                    <div>
+                        <p class="text-white font-medium">Low</p>
+                        <p class="text-xs text-gray-400">&lt; 60 minutes</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                    <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
+                    <div>
+                        <p class="text-white font-medium">Moderate</p>
+                        <p class="text-xs text-gray-400">60-119 minutes</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                    <div class="w-4 h-4 rounded-full bg-orange-500"></div>
+                    <div>
+                        <p class="text-white font-medium">High</p>
+                        <p class="text-xs text-gray-400">120-239 minutes</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                    <div class="w-4 h-4 rounded-full bg-red-500"></div>
+                    <div>
+                        <p class="text-white font-medium">Critical</p>
+                        <p class="text-xs text-gray-400">≥ 240 minutes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-effect border-t border-white/10 mt-12">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-400">
+                <p>© 2024 NI Emergency Department Dashboard. Data from NI Direct.</p>
+                <div class="flex items-center gap-4">
+                    <a href="https://www.nidirect.gov.uk/articles/emergency-department-average-waiting-times" target="_blank" class="hover:text-blue-400 transition-colors">
+                        <i class="fas fa-external-link-alt mr-1"></i>Data Source
+                    </a>
+                    <span>•</span>
+                    <span>Auto-refresh: 60s</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let allHospitals = [];
+        let currentFilter = 'all';
+        let currentSort = 'wait-desc';
+        let countdownInterval;
+        let autoRefreshInterval;
+        let secondsRemaining = 60;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            startAutoRefresh();
+            startCountdown();
+        });
+
+        // Load data from API
+        async function loadData() {
+            try {
+                const response = await fetch('/api/wait-times');
+                const result = await response.json();
+                
+                if (result.success) {
+                    allHospitals = result.data;
+                    updateUI(result);
+                    document.getElementById('loading-state').classList.add('hidden');
+                    document.getElementById('error-state').classList.add('hidden');
+                    document.getElementById('hospitals-grid').classList.remove('hidden');
+                } else {
+                    showError();
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError();
+            }
+        }
+
+        // Update UI with data
+        function updateUI(result) {
+            updateLastUpdated(result.last_updated);
+            updateStats(result.stats);
+            renderHospitals();
+        }
+
+        // Update last updated time
+        function updateLastUpdated(timestamp) {
+            document.getElementById('last-updated').textContent = timestamp;
+        }
+
+        // Update statistics cards
+        function updateStats(stats) {
+            const container = document.getElementById('stats-container');
+            container.innerHTML = `
+                <div class="stat-card glass-effect rounded-xl p-4 border border-white/10 animate-slide-up">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-hospital text-blue-400 text-xl"></i>
+                        <span class="text-2xl font-bold text-white">${stats.total_hospitals}</span>
+                    </div>
+                    <p class="text-xs text-gray-400 font-medium">Total Hospitals</p>
+                </div>
+                <div class="stat-card glass-effect rounded-xl p-4 border border-red-500/30 animate-slide-up" style="animation-delay: 0.1s">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+                        <span class="text-2xl font-bold text-red-500">${stats.critical}</span>
+                    </div>
+                    <p class="text-xs text-gray-400 font-medium">Critical (≥240m)</p>
+                </div>
+                <div class="stat-card glass-effect rounded-xl p-4 border border-orange-500/30 animate-slide-up" style="animation-delay: 0.2s">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-exclamation-circle text-orange-500 text-xl"></i>
+                        <span class="text-2xl font-bold text-orange-500">${stats.high}</span>
+                    </div>
+                    <p class="text-xs text-gray-400 font-medium">High (120-239m)</p>
+                </div>
+                <div class="stat-card glass-effect rounded-xl p-4 border border-yellow-500/30 animate-slide-up" style="animation-delay: 0.3s">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-clock text-yellow-500 text-xl"></i>
+                        <span class="text-2xl font-bold text-yellow-500">${stats.moderate}</span>
+                    </div>
+                    <p class="text-xs text-gray-400 font-medium">Moderate (60-119m)</p>
+                </div>
+                <div class="stat-card glass-effect rounded-xl p-4 border border-green-500/30 animate-slide-up" style="animation-delay: 0.4s">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                        <span class="text-2xl font-bold text-green-500">${stats.low}</span>
+                    </div>
+                    <p class="text-xs text-gray-400 font-medium">Low (&lt;60m)</p>
+                </div>
+                <div class="stat-card glass-effect rounded-xl p-4 border border-purple-500/30 animate-slide-up" style="animation-delay: 0.5s">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-chart-line text-purple-400 text-xl"></i>
+                        <span class="text-2xl font-bold text-purple-400">${stats.average_wait}</span>
+                    </div>
+                    <p class="text-xs text-gray-400 font-medium">Avg Wait (mins)</p>
+                </div>
+            `;
+        }
+
+        // Render hospital cards
+        function renderHospitals() {
+            let filtered = [...allHospitals];
+            
+            // Apply filter
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(h => h.severity === currentFilter);
+            }
+            
+            // Apply sort
+            filtered.sort((a, b) => {
+                switch(currentSort) {
+                    case 'wait-desc':
+                        return (b.wait_mins || 0) - (a.wait_mins || 0);
+                    case 'wait-asc':
+                        return (a.wait_mins || 0) - (b.wait_mins || 0);
+                    case 'name-asc':
+                        return a.hospital.localeCompare(b.hospital);
+                    case 'name-desc':
+                        return b.hospital.localeCompare(a.hospital);
+                }
+            });
+            
+            const container = document.getElementById('hospitals-grid');
+            container.innerHTML = filtered.map((hospital, index) => `
+                <div class="hospital-card glass-effect rounded-xl overflow-hidden border border-white/10 animate-slide-up" style="animation-delay: ${index * 0.05}s">
+                    <div class="severity-${hospital.severity} p-1">
+                        <div class="bg-ni-darker/90 p-5">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-bold text-white mb-1 leading-tight">${hospital.hospital}</h3>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <span class="px-2 py-1 rounded text-xs font-semibold ${getSeverityBadgeClass(hospital.severity)}">
+                                            ${hospital.severity.toUpperCase()}
+                                        </span>
+                                        <span class="px-2 py-1 rounded text-xs font-medium bg-white/10 text-gray-300">
+                                            <i class="fas fa-door-open mr-1"></i>${hospital.status}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-4xl font-black text-white mb-1">
+                                        ${hospital.wait_mins !== null ? hospital.wait_mins : '—'}
+                                    </div>
+                                    <div class="text-xs text-gray-400 font-medium">minutes</div>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-white/10 pt-4 mt-4">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-400">
+                                        <i class="fas fa-info-circle mr-1"></i>Average wait
+                                    </span>
+                                    <span class="text-white font-medium">${hospital.display_wait}</span>
+                                </div>
+                            </div>
+                            
+                            ${hospital.wait_mins !== null ? `
+                            <div class="mt-4">
+                                <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+                                    <span>Wait Time Indicator</span>
+                                    <span>${getWaitTimeDescription(hospital.wait_mins)}</span>
+                                </div>
+                                <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                                    <div class="severity-${hospital.severity} h-full rounded-full transition-all duration-500" style="width: ${Math.min((hospital.wait_mins / 300) * 100, 100)}%"></div>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Helper functions
+        function getSeverityBadgeClass(severity) {
+            const classes = {
+                'critical': 'bg-red-500/20 text-red-400 border border-red-500/30',
+                'high': 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
+                'moderate': 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+                'low': 'bg-green-500/20 text-green-400 border border-green-500/30',
+                'unknown': 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+            };
+            return classes[severity] || classes.unknown;
+        }
+
+        function getWaitTimeDescription(minutes) {
+            if (minutes < 60) return 'Excellent';
+            if (minutes < 120) return 'Good';
+            if (minutes < 240) return 'Busy';
+            return 'Very Busy';
+        }
+
+        // Filter by severity
+        function filterBySeverity(severity) {
+            currentFilter = severity;
+            
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-blue-600', 'text-white');
+                btn.classList.add('text-gray-400', 'hover:bg-white/5');
+            });
+            
+            const activeBtn = document.querySelector(`[data-filter="${severity}"]`);
+            activeBtn.classList.add('active', 'bg-blue-600', 'text-white');
+            activeBtn.classList.remove('text-gray-400', 'hover:bg-white/5');
+            
+            renderHospitals();
+        }
+
+        // Sort hospitals
+        function sortHospitals(sortType) {
+            currentSort = sortType;
+            renderHospitals();
+        }
+
+        // Refresh data
+        async function refreshData() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('fa-spin');
+            
+            await loadData();
+            resetCountdown();
+            
+            setTimeout(() => {
+                icon.classList.remove('fa-spin');
+            }, 1000);
+        }
+
+        // Auto-refresh
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(() => {
+                refreshData();
+            }, 60000); // 60 seconds
+        }
+
+        // Countdown timer
+        function startCountdown() {
+            countdownInterval = setInterval(() => {
+                secondsRemaining--;
+                document.getElementById('countdown').textContent = secondsRemaining + 's';
+                
+                if (secondsRemaining <= 0) {
+                    resetCountdown();
+                }
+            }, 1000);
+        }
+
+        function resetCountdown() {
+            secondsRemaining = 60;
+            document.getElementById('countdown').textContent = '60s';
+        }
+
+        // Show error state
+        function showError() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('hospitals-grid').classList.add('hidden');
+            document.getElementById('error-state').classList.remove('hidden');
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            clearInterval(countdownInterval);
+            clearInterval(autoRefreshInterval);
+        });
+    </script>
+</body>
+</html>

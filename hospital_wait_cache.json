@@ -1,0 +1,28 @@
+{
+  "fetched_at": "2025-10-18T22:45:14.142519",
+  "source_updated": "10.00 pm, Saturday 18 October 2025.",
+  "data": {
+    "Antrim AreaED": 307,
+    "Royal Victoria ED": 251,
+    "Craigavon AreaED": 196,
+    "Mater ED": 172,
+    "Royal Children\u2019s ED": 151,
+    "South West Acute ED": 147,
+    "Altnagelvin AreaED": 115,
+    "Ulster ED": 114,
+    "Daisy Hill ED": 106,
+    "Causeway AreaED": 96
+  },
+  "last_trends": {
+    "Antrim AreaED": "up",
+    "Causeway AreaED": "down",
+    "South West Acute ED": "down",
+    "Altnagelvin AreaED": "up",
+    "Royal Victoria ED": "up",
+    "Mater ED": "down",
+    "Craigavon AreaED": "down",
+    "Daisy Hill ED": "up",
+    "Ulster ED": "up",
+    "Royal Children\u2019s ED": "up"
+  }
+}
