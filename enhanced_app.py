@@ -61,7 +61,10 @@ def parse_wait_to_minutes(text: str) -> Optional[int]:
     return None
 
 def fetch_ni_direct_rows() -> Tuple[List[Dict[str, Any]], Optional[str]]:
-    r = requests.get(NI_DIRECT_URL, timeout=30)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    r = requests.get(NI_DIRECT_URL, headers=headers, timeout=30)
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "html.parser")
 
