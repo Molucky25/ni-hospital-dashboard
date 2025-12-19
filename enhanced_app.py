@@ -187,11 +187,15 @@ def get_severity_level(minutes: Optional[int]) -> str:
     return "low"
 
 def store_historical_data(rows: List[Dict[str, Any]], timestamp: str):
-    """Store data point for historical tracking"""
+    """Store current data for historical tracking"""
     global historical_data
     
+    # Store with ISO format timestamp for easier parsing
+    iso_timestamp = datetime.now(timezone.utc).isoformat()
+    
     data_point = {
-        "timestamp": timestamp,
+        "timestamp": iso_timestamp,
+        "display_timestamp": timestamp,  # Keep human-readable for display
         "data": rows,
         "stats": calculate_stats(rows)
     }
@@ -200,7 +204,7 @@ def store_historical_data(rows: List[Dict[str, Any]], timestamp: str):
     
     # Keep only last 24 hours of data
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-    historical_data = [d for d in historical_data if datetime.fromisoformat(d["timestamp"].replace(" GMT", "+00:00")) > cutoff]
+    historical_data = [d for d in historical_data if datetime.fromisoformat(d["timestamp"]) > cutoff]
 
 def calculate_stats(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Calculate statistics from hospital data"""
@@ -307,7 +311,7 @@ def get_historical():
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
     filtered_data = [
         d for d in historical_data 
-        if datetime.fromisoformat(d["timestamp"].replace(" GMT", "+00:00")) > cutoff
+        if datetime.fromisoformat(d["timestamp"]) > cutoff
     ]
     
     return jsonify({
@@ -332,7 +336,7 @@ def get_trends():
     
     cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
     for d in reversed(historical_data[:-1]):
-        if datetime.fromisoformat(d["timestamp"].replace(" GMT", "+00:00")) <= cutoff:
+        if datetime.fromisoformat(d["timestamp"]) <= cutoff:
             one_hour_ago = d
             break
     
